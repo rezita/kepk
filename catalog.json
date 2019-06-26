@@ -1,0 +1,6 @@
+[
+    { "type": "img", "src":"screenshot.png" },
+    { "type": "img", "src":"bad.PNG" },
+    { "type": "vid", "src":"video0.mov" },
+    { "type": "img", "src":"good.PNG" }
+]
