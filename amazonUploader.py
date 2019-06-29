@@ -4,11 +4,13 @@ import PIL.Image, PIL.ExifTags
 from datetime import datetime
 import configparser
 import threading
+import json
 
-s3=boto3.resource('s3')
+s3 = boto3.resource('s3')
 #s3=boto3.resource('s3')
 base_bucket_name = "photos.pataky."
 hash_file=".amazonUploader" #file contains albumname and file-hash pairs
+json_file = "photos.json"
 hash_photos = "Photos"
 hash_album = "Album"
 image_ext = ".jpg", ".jpeg", ".png", ".gif"
@@ -50,15 +52,17 @@ def get_file_info(file_path):
     else:
         date_taken = os.path.getctime(file_path)
         date_taken = datetime.fromtimestamp(date_taken)
-    result['date_taken'] = date_taken.strftime('%Y-%m-%d %H:%M:%S')
+    print('\n' + date_taken.strftime('%Y-%m-%d %H:%M:%S'))
+    result['date_taken'] = datetime.timestamp(date_taken)
+    print('\n' + str(result['date_taken']))
 
-    date_modif = exif_info.get(306, "0000:00:00 00:00:00")
-    if date_modif != "0000:00:00 00:00:00":
-        date_modif = datetime.strptime(date_modif, '%Y:%m:%d %H:%M:%S')
-    else:
-        date_modif = os.path.getmtime(file_path)
-        date_modif = datetime.fromtimestamp(date_modif)
-    result['date_modif'] = date_modif.strftime('%Y-%m-%d %H:%M:%S')
+#    date_modif = exif_info.get(306, "0000:00:00 00:00:00")
+#    if date_modif != "0000:00:00 00:00:00":
+#        date_modif = datetime.strptime(date_modif, '%Y:%m:%d %H:%M:%S')
+#    else:
+#        date_modif = os.path.getmtime(file_path)
+#        date_modif = datetime.fromtimestamp(date_modif)
+#    result['date_modif'] = date_modif.strftime('%Y-%m-%d %H:%M:%S')
 
     orientation = exif_info.get(274, 1)
     result['orient'] = orientation
@@ -93,14 +97,16 @@ def get_size(file_path):
 def get_photo_data(path, file_name):
     """Sets photo data for the given file."""
     file_path = os.path.join(path, file_name)
-    data = {'filename': file_name,
+    upload_data = {'src': file_name,
+            'type': 'vid' if is_video_file(file_name) else 'img',
+            'size': get_size(file_path)}
+    data = {'upload_data': upload_data,
+            'filename': file_name,
             'source': file_path,
             'dirname': path,
-            'uploaded': False,
-            'video': is_video_file(file_name),
-            'file_size': get_size(file_path)}
+            'uploaded': False}
     file_info = get_file_info(file_path)
-    data.update(file_info)
+    data['upload_data'].update(file_info)
     return data
 
 def clear_hash_data(path):
@@ -203,11 +209,25 @@ class ProgressPercentage(object):
             sys.stdout.flush()
 
 class AmazonUploader():
+    def get_bucket_name_for_album(self, album_name):
+        return base_bucket_name + album_name
+    
     def is_valid_bucket(self, album_name):
         result = True
-        bucket_name = base_bucket_name + album_name
+        bucket_name = self.get_bucket_name_for_album(album_name)
         try:
             s3.meta.client.head_bucket(Bucket = bucket_name)
+        except botocore.client.ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == '404':
+                result = False
+        return result
+
+    def is_json_exists(self, album_name):
+        result = True
+        bucket_name = self.get_bucket_name_for_album(album_name)
+        try:
+            s3.meta.client.head_object(Bucket = bucket_name, Key = json_file)
         except botocore.client.ClientError as e:
             error_code = e.response['Error']['Code']
             if error_code == '404':
@@ -226,8 +246,22 @@ class AmazonUploader():
         result = set_selectable(path, result, is_valid_album)
         return result
    
-    def append_to_amazon_config(self, photo_data):
-        print('OK')
+    def append_to_amazon_config(self, album_name, photo_data):
+        bucket_name = self.get_bucket_name_for_album(album_name)
+        json_object = s3.Object(bucket_name, json_file)
+        
+        if not self.is_json_exists(album_name):
+            #if json file doesn't exist - create with the given photo data
+            json_content = []
+        else:
+            #if json file exists - read-append*sort-save
+            file_content = json_object.get()['Body'].read().decode('utf-8')
+            json_content = json.loads(file_content)
+        
+        json_content.append(photo_data['upload_data'])
+        sorted_content = sorted(json_content, key = lambda k: k.get('date_taken', 0), reverse = True)
+        print(sorted_content)
+        json_object.put(ACL= 'public-read', Body = json.dumps(sorted_content, ensure_ascii = False))
 
     def upload_photo(self, photo, bucket_name):
         try:
@@ -241,7 +275,7 @@ class AmazonUploader():
 
     def update_bucket(self, photos, album_name):
         #update bucket
-        amazon_bucket_name = base_bucket_name + album_name
+        amazon_bucket_name = self.get_bucket_name_for_album(album_name)
         if photos:
             #checks if the albumname is in configfile. If not, put it in
             append_to_hash_file(
@@ -255,13 +289,14 @@ class AmazonUploader():
             hash_of_photo = calculate_hash_of_file(photo['source'])
             print('Upload photo:' + photo['filename'])
             if self.upload_photo(photo, amazon_bucket_name):
-                self.append_to_amazon_config(photo)
+                self.append_to_amazon_config(album_name, photo)
                 append_to_hash_file(photo['dirname'], hash_photos, photo['filename'], hash_of_photo)
             else:
                 print('\n Upload failed')
 
     def create_bucket(self, album_name):
-        s3.create_bucket(Bucket = base_bucket_name + album_name)
+        bucket_name = self.get_bucket_name_for_album(album_name)
+        s3.create_bucket(Bucket = bucket_name, ACL = "public-read", CreateBucketConfiguration={ 'LocationConstraint': 'EU'})
 
     def update_or_create_album(self, photos, album_name):
         if not self.is_valid_bucket(album_name):
