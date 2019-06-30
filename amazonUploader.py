@@ -52,9 +52,7 @@ def get_file_info(file_path):
     else:
         date_taken = os.path.getctime(file_path)
         date_taken = datetime.fromtimestamp(date_taken)
-    print('\n' + date_taken.strftime('%Y-%m-%d %H:%M:%S'))
     result['date_taken'] = datetime.timestamp(date_taken)
-    print('\n' + str(result['date_taken']))
 
 #    date_modif = exif_info.get(306, "0000:00:00 00:00:00")
 #    if date_modif != "0000:00:00 00:00:00":
@@ -260,7 +258,6 @@ class AmazonUploader():
         
         json_content.append(photo_data['upload_data'])
         sorted_content = sorted(json_content, key = lambda k: k.get('date_taken', 0), reverse = True)
-        print(sorted_content)
         json_object.put(ACL= 'public-read', Body = json.dumps(sorted_content, ensure_ascii = False))
 
     def upload_photo(self, photo, bucket_name):
