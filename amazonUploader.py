@@ -5,6 +5,7 @@ from datetime import datetime
 import configparser
 import threading
 import json
+import re
 
 s3 = boto3.resource('s3')
 #s3=boto3.resource('s3')
@@ -42,25 +43,31 @@ def is_image_file(file_path):
     """Checks if the given file (with path) is an image"""
     return file_path.lower().endswith(image_ext)
 
-def get_file_info(file_path):
+def get_date_taken_from_file_name(file_name):
+    result = 0
+    match = re.search(r'\d{8}_\d{6}', file_name)
+    if match:
+        try:
+            date = datetime.strptime(match.group(), '%Y%m%d_%H%M%S')
+            result = date
+        except ValueError as ve:
+            pass
+    return result
+
+def get_file_info(file_path, file_name):
     """get useful exif info of the file"""
     exif_info = get_exif(file_path)
     result = {}
+    #get exif data
     date_taken = exif_info.get(36867, "0000:00:00 00:00:00")
     if date_taken != "0000:00:00 00:00:00":
         date_taken = datetime.strptime(date_taken, '%Y:%m:%d %H:%M:%S')
     else:
-        date_taken = os.path.getctime(file_path)
-        date_taken = datetime.fromtimestamp(date_taken)
+        date_taken = get_date_taken_from_file_name(file_name)
+        if date_taken == 0:
+            date_taken = os.path.getctime(file_path)
+            date_taken = datetime.fromtimestamp(date_taken)
     result['date_taken'] = datetime.timestamp(date_taken)
-
-#    date_modif = exif_info.get(306, "0000:00:00 00:00:00")
-#    if date_modif != "0000:00:00 00:00:00":
-#        date_modif = datetime.strptime(date_modif, '%Y:%m:%d %H:%M:%S')
-#    else:
-#        date_modif = os.path.getmtime(file_path)
-#        date_modif = datetime.fromtimestamp(date_modif)
-#    result['date_modif'] = date_modif.strftime('%Y-%m-%d %H:%M:%S')
 
     orientation = exif_info.get(274, 1)
     result['orient'] = orientation
@@ -103,7 +110,7 @@ def get_photo_data(path, file_name):
             'source': file_path,
             'dirname': path,
             'uploaded': False}
-    file_info = get_file_info(file_path)
+    file_info = get_file_info(file_path, file_name)
     data['upload_data'].update(file_info)
     return data
 
