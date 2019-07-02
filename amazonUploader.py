@@ -195,15 +195,20 @@ class ProgressPercentage(object):
         self._filename = file_name
         self._size = os.path.getsize(file_name)
         self._lock = threading.Lock()
-        self._readed = 0
+        self._uploaded = 0
+
+    def byte_to_kB(self, source):
+        return str(round(source /1024)) + 'kB'
 
     def __call__(self, bytes_amount):
         with self._lock:
-            self._readed += bytes_amount
-            percentage = (self._readed * 100) / self._size
-            sys.stdout.write("\r%s  %s / %s  (%.2f%%)" % (
-                        self._filename, self._readed, self._size,
-                        percentage))
+            self._uploaded += bytes_amount
+            percentage = (self._uploaded * 100) / self._size
+            sys.stdout.write("\r%s  %s/ %s (%.2f%%)" % (
+                'Uploading %s:' % self._filename,
+                self.byte_to_kB(self._uploaded),
+                self.byte_to_kB(self._size),
+                percentage))
             sys.stdout.flush()
 
 class AmazonUploader():
@@ -221,16 +226,22 @@ class AmazonUploader():
                 result = False
         return result
 
-    def is_json_exists(self, album_name):
+    def is_key_exists(self, album_name, key):
         result = True
         bucket_name = self.get_bucket_name_for_album(album_name)
         try:
-            s3.meta.client.head_object(Bucket = bucket_name, Key = json_file)
+            s3.meta.client.head_object(Bucket = bucket_name, Key = key)
         except botocore.client.ClientError as e:
             error_code = e.response['Error']['Code']
             if error_code == '404':
                 result = False
         return result
+
+    def is_json_exists(self, album_name):
+        return self.is_key_exists(album_name, json_file)
+
+    def is_index_html_exists(self, album_name):
+        return self.is_key_exists(album_name, 'index.html')
 
     def get_all_photos_data(self, path, album_name):
         """Retruns all data of photos (media files) from the given path"""
@@ -255,17 +266,18 @@ class AmazonUploader():
             #if json file exists - read-append*sort-save
             file_content = json_object.get()['Body'].read().decode('utf-8')
             json_content = json.loads(file_content)
-        
+
         json_content.append(photo_data['upload_data'])
         sorted_content = sorted(json_content, key = lambda k: k.get('date_taken', 0), reverse = True)
         json_object.put(ACL= 'public-read', Body = json.dumps(sorted_content, ensure_ascii = False))
 
     def upload_photo(self, photo, bucket_name):
         try:
-            result =  s3.meta.client.upload_file(Filename = photo['source'], 
+            result =  s3.meta.client.upload_file(Filename = photo['source'],
                 Bucket = bucket_name, Key = photo['filename'],
                 ExtraArgs = {'ACL': 'public-read'},
-                Callback = ProgressPercentage(photo['source']))
+                Callback = ProgressPercentage(photo['filename']))
+            print('\n')
         except ClientError as e:
             return False
         return True
@@ -284,21 +296,33 @@ class AmazonUploader():
         for photo in photos:
             #upload photos one by one and add hash to the config file
             hash_of_photo = calculate_hash_of_file(photo['source'])
-            print('Upload photo:' + photo['filename'])
             if self.upload_photo(photo, amazon_bucket_name):
                 self.append_to_amazon_config(album_name, photo)
                 append_to_hash_file(photo['dirname'], hash_photos, photo['filename'], hash_of_photo)
             else:
                 print('\n Upload failed')
 
-    def create_bucket(self, album_name):
-        bucket_name = self.get_bucket_name_for_album(album_name)
-        s3.create_bucket(Bucket = bucket_name, ACL = "public-read", CreateBucketConfiguration={ 'LocationConstraint': 'EU'})
+    def update_index_html(self, bucket_name):
+        """upload index.html if not available or there is a newer version"""
+        index_html_path = sys.path[0] + '\index.html'
+        s3.meta.client.upload_file(Filename = index_html_path, 
+                Bucket = bucket_name, Key = 'index.html',
+                ExtraArgs = {'ACL': 'public-read'})
+
+    def create_bucket(self, bucket_name):
+        print('New album %s \n' % album_name)
+        s3.create_bucket(Bucket = bucket_name,
+                ACL = "public-read",
+                CreateBucketConfiguration={ 'LocationConstraint': 'EU'})
 
     def update_or_create_album(self, photos, album_name):
+        bucket_name = self.get_bucket_name_for_album(album_name)
         if not self.is_valid_bucket(album_name):
             #create bucket
-            self.create_bucket(album_name)
+            self.create_bucket(bucket_name)
+        self.update_index_html(bucket_name)
+        print('Update album %s \n' % album_name)
+        print('New files: %d \n' % (len(photos)))
         self.update_bucket(photos, album_name)
 
     def upload_all(self, path, album):
