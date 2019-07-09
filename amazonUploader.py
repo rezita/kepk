@@ -79,6 +79,7 @@ def get_formed_date_taken(file_path, file_name, date_value, zero_value, date_for
         date_taken = datetime.strptime(date_value, date_format)
     else:
         date_taken = get_date_taken_from_path(file_path, file_name)
+    return date_taken
 
 def get_date_taken(file_path, file_name):
     date_taken = 0
@@ -86,11 +87,11 @@ def get_date_taken(file_path, file_name):
         exif_info = get_exif(file_path)
         date_taken = exif_info.get(36867, "0000:00:00 00:00:00")
         date_taken = get_formed_date_taken(file_path, file_name, date_taken,
-                "0000:00:00 00:00:00", "%Y:m:d %H:%M:%S")
+                "0000:00:00 00:00:00", "%Y:%m:%d %H:%M:%S")
     elif is_video_file(file_path):
         date_taken = get_video_metadata_creation_time(file_path)
         date_taken = get_formed_date_taken(file_path, file_name, date_taken,
-                "0000-00-00 00:00:00", "%Y-m-d %H:%M:%S")
+                "0000-00-00 00:00:00", "%Y-%m-%d %H:%M:%S")
     date_taken = date_taken.strftime('%Y%m%d%H%M%S')
     return date_taken
 
@@ -102,7 +103,7 @@ def get_file_info(file_path, file_name):
     """get useful exif info of the file"""
     result = {}
     result['date_taken'] = get_date_taken(file_path, file_name)
-    result['orient'] = get_orientation(filepath)
+    result['orient'] = get_orientation(file_path)
     return result
 
 def calculate_hash_of_file(filepath):
