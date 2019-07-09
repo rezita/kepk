@@ -106,11 +106,7 @@ def get_file_info(file_path, file_name):
     return result
 
 def calculate_hash_of_file(filepath):
-    ''' Calculates the Hash code of the file.
-        The hash code depends on the file content not the name of it.
-        So renamed files have the same hash_code.
-        If the content of the file is changed the hash code will be
-        differ from the original file.'''
+    ''' Calculates the Hash code of the file.'''
     hasher = hashlib.sha256()
     with open(filepath, 'rb') as afile:
         buffer = afile.read()
@@ -193,7 +189,6 @@ def append_to_hash_file(path, section, option, value):
         If the config file doesn't exist, it creates it.
         If the given section doesn't exist, it adds to the file."""
     config_path = os.path.join(path, hash_file)
-
     config = configparser.ConfigParser()
 
     if not is_valid_path(config_path):
@@ -208,7 +203,7 @@ def append_to_hash_file(path, section, option, value):
 
 def get_album_name(path, album):
     """ Returns the album_name. The rules:
-        First check the config file. If the album is set-it will use it. 
+        First check the config file. If the album is set-it will use it.
         If not, use the given album parameter """
     album_name = read_album_from_config(path)
     return album_name if album_name else album
@@ -252,7 +247,7 @@ class ProgressPercentage(object):
 class AmazonUploader():
     def get_bucket_name_for_album(self, album_name):
         return base_bucket_name + album_name
-    
+
     def is_valid_bucket(self, album_name):
         result = True
         bucket_name = self.get_bucket_name_for_album(album_name)
@@ -292,11 +287,11 @@ class AmazonUploader():
         is_valid_album = self.is_valid_bucket(album_name)
         result = set_selectable(path, result, is_valid_album)
         return result
-   
+
     def append_to_amazon_config(self, album_name, photo_data):
         bucket_name = self.get_bucket_name_for_album(album_name)
         json_object = s3.Object(bucket_name, json_file)
-        
+
         if not self.is_json_exists(album_name):
             #if json file doesn't exist - create with the given photo data
             json_content = []
