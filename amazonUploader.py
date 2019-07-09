@@ -6,9 +6,9 @@ import configparser
 import threading
 import json
 import re
+import subprocess
 
 s3 = boto3.resource('s3')
-#s3=boto3.resource('s3')
 base_bucket_name = "photos.pataky."
 hash_file=".amazonUploader" #file contains albumname and file-hash pairs
 json_file = "photos.json"
@@ -67,24 +67,42 @@ def get_date_taken_from_file_name(file_name):
             pass
     return result
 
+def get_date_taken_from_path(file_path, file_name):
+    date_taken = get_date_taken_from_file_name(file_name)
+    if date_taken == -1:
+        date_taken = os.path.getctime(file_path)
+        date_taken = datetime.fromtimestamp(date_taken)
+    return date_taken
+
+def get_formed_date_taken(file_path, file_name, date_value, zero_value, date_format):
+    if date_value != zero_value:
+        date_taken = datetime.strptime(date_value, date_format)
+    else:
+        date_taken = get_date_taken_from_path(file_path, file_name)
+
+def get_date_taken(file_path, file_name):
+    date_taken = 0
+    if is_image_file(file_path):
+        exif_info = get_exif(file_path)
+        date_taken = exif_info.get(36867, "0000:00:00 00:00:00")
+        date_taken = get_formed_date_taken(file_path, file_name, date_taken,
+                "0000:00:00 00:00:00", "%Y:m:d %H:%M:%S")
+    elif is_video_file(file_path):
+        date_taken = get_video_metadata_creation_time(file_path)
+        date_taken = get_formed_date_taken(file_path, file_name, date_taken,
+                "0000-00-00 00:00:00", "%Y-m-d %H:%M:%S")
+    date_taken = date_taken.strftime('%Y%m%d%H%M%S')
+    return date_taken
+
+def get_orientation(file_path):
+    exif_info = get_exif(file_path)
+    return exif_info.get(274, 1)
+
 def get_file_info(file_path, file_name):
     """get useful exif info of the file"""
-    exif_info = get_exif(file_path)
     result = {}
-    #get exif data
-    date_taken = exif_info.get(36867, "0000:00:00 00:00:00")
-    if date_taken != "0000:00:00 00:00:00":
-        date_taken = datetime.strptime(date_taken, '%Y:%m:%d %H:%M:%S')
-    else:
-        date_taken = get_date_taken_from_file_name(file_name)
-        if date_taken == 0:
-            date_taken = os.path.getctime(file_path)
-            date_taken = datetime.fromtimestamp(date_taken)
-    result['date_taken'] = datetime.timestamp(date_taken)
-
-    orientation = exif_info.get(274, 1)
-    result['orient'] = orientation
-
+    result['date_taken'] = get_date_taken(file_path, file_name)
+    result['orient'] = get_orientation(filepath)
     return result
 
 def calculate_hash_of_file(filepath):
