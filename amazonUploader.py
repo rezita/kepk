@@ -31,6 +31,10 @@ def is_video_file(file_path):
     """Checks if the given file (with path) is a movie file"""
     return file_path.lower().endswith(video_ext)
 
+def is_image_file(file_path):
+    """Checks if the given file (with path) is an image"""
+    return file_path.lower().endswith(image_ext)
+
 def get_exif(file_path):
     result = {}
     if is_image_file(file_path):
@@ -39,12 +43,21 @@ def get_exif(file_path):
         img.close()
     return result if result != None else {}
 
-def is_image_file(file_path):
-    """Checks if the given file (with path) is an image"""
-    return file_path.lower().endswith(image_ext)
+def get_video_metadata_creation_time(file_path):
+    result =  "0000-00-00 00:00:00"
+    try:
+        cmd = ['ffprobe', '-print_format', 'json', '-show_format', file_path]
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err =  p.communicate()
+        out = json.loads(out.decode('utf-8'))
+        result = out['format']['tags']['creation_time']
+    except (FileNotFoundError, KeyError) as e:
+        #it ffbpobe.exe or the kexs are not availale
+        pass
+    return result
 
 def get_date_taken_from_file_name(file_name):
-    result = 0
+    result = -1
     match = re.search(r'\d{8}_\d{6}', file_name)
     if match:
         try:
