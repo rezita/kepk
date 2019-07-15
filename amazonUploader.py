@@ -289,6 +289,12 @@ class AmazonUploader():
         result = set_selectable(path, result, is_valid_album)
         return result
 
+    def add_to_json(self, json_content, new_data):
+        #first remove from json file is already exist the file
+        json_content = [i for i in json_content if i['src'] != new_data['src']]
+        json_content.append(new_data)
+        return json_content
+
     def append_to_amazon_config(self, album_name, photo_data):
         bucket_name = self.get_bucket_name_for_album(album_name)
         json_object = s3.Object(bucket_name, json_file)
@@ -301,7 +307,7 @@ class AmazonUploader():
             file_content = json_object.get()['Body'].read().decode('utf-8')
             json_content = json.loads(file_content)
 
-        json_content.append(photo_data['upload_data'])
+        json_content = self.add_to_json(json_content, photo_data['upload_data'])
         sorted_content = sorted(json_content, key = lambda k: k.get('date_taken', 0), reverse = True)
         json_object.put(ACL= 'public-read', Body = json.dumps(sorted_content, ensure_ascii = False))
 
