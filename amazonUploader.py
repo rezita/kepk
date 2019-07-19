@@ -347,7 +347,7 @@ class AmazonUploader():
         index_html_path = sys.path[0] + '\index.html'
         s3.meta.client.upload_file(Filename = index_html_path, 
                 Bucket = bucket_name, Key = 'index.html',
-                ExtraArgs = {'ACL': 'public-read'})
+                ExtraArgs = {'ACL': 'public-read', 'ContentType': 'text/html'})
 
     def create_bucket(self, bucket_name):
         print('New album %s \n' % album_name)
@@ -368,6 +368,7 @@ class AmazonUploader():
     def upload_all(self, path, album):
         """Upload all media files from the given folder to the given album"""
         album_name = get_album_name(path, album)
+        print("Get photos and videos to upload...")
         data = self.get_all_photos_data(path, album_name)
         #get the photos needs to be uploaded
         uploadable = [photo for photo in data if photo['uploaded'] == False]
