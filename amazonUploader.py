@@ -327,8 +327,11 @@ class AmazonUploader():
                     hash_album,
                     hash_album,
                     album_name)
-
+        index = 0
+        nr_of_files = len(file_names)
         for file_name in file_names:
+            index += 1
+            print('%d/%d:' % (index, nr_of_files))
             #upload photos one by one and add hash to the config file
             file_data = get_photo_data(path, file_name)
             if self.upload_photo(file_data, amazon_bucket_name):
