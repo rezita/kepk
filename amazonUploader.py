@@ -18,13 +18,16 @@ image_ext = ".jpg", ".jpeg", ".png", ".gif"
 video_ext = ".mov", ".avi", ".m4v", ".mp4"
 hash_prefix = "sha256_"
 
+def get_diff_of_lists(listA, listB):
+    return list(set(listA) - set(listB))
+
 def is_valid_path(path):
     """Checks if the given path exists"""
     return os.path.exists(path)
 
 def get_media_files(path):
     """Returns the list of media files are in predefined folder"""
-    return [file_name for file_name in os.listdir(path)
+    return [file_name.lower() for file_name in os.listdir(path)
             if file_name.lower().endswith(image_ext + video_ext)]
 
 def is_video_file(file_path):
@@ -137,7 +140,7 @@ def get_photo_data(path, file_name):
             'filename': file_name,
             'source': file_path,
             'dirname': path,
-            'uploaded': False}
+            'hash': calculate_hash_of_file(file_path)}
     file_info = get_file_info(file_path, file_name)
     data['upload_data'].update(file_info)
     return data
@@ -209,20 +212,19 @@ def get_album_name(path, album):
     album_name = read_album_from_config(path)
     return album_name if album_name else album
 
-def set_selectable(path, data_list, is_valid_album):
-   """Marks the uploaded data in the datalist """
-   datas = data_list
-   if is_valid_album:
-       hash_name_pairs = read_hash_from_config(path)
-       filenames_from_hash = [file_name.lower() for file_name
-           in list(hash_name_pairs)]
-       for data in datas:
-           if data['filename'].lower() in filenames_from_hash:
-               data['uploaded'] = True
-   else:
-       #the hash_file is corrupt --> clear it
-       clear_hash_data(path)
-   return datas
+def get_uploaded_file_names(path):
+    hash_name_pairs = read_hash_from_config(path)
+    return [file_name.lower() for file_name in list(hash_name_pairs)]
+
+def get_uploadable_files(path, is_valid_album):
+    all_files = get_media_files(path)
+    uploaded = []
+    if is_valid_album:
+        print('ok')
+        uploaded = get_uploaded_file_names(path)
+    else:
+        clear_hash_data(path)
+    return get_diff_of_lists(all_files, uploaded)
 
 class ProgressPercentage(object):
     def __init__(self, file_name):
@@ -277,17 +279,10 @@ class AmazonUploader():
     def is_index_html_exists(self, album_name):
         return self.is_key_exists(album_name, 'index.html')
 
-    def get_all_photos_data(self, path, album_name):
-        """Retruns all data of photos (media files) from the given path"""
-        result = []
-        media_files = get_media_files(path)
-        for file_name in media_files:
-            data = get_photo_data(path, file_name)
-            result.append(data)
-        #check if the album is a valid amazon bucket name
+    def get_all_uploadable_files(self, path, album_name):
+        """Retruns all uploadable files from the given path"""
         is_valid_album = self.is_valid_bucket(album_name)
-        result = set_selectable(path, result, is_valid_album)
-        return result
+        return get_uploadable_files(path, is_valid_album)
 
     def add_to_json(self, json_content, new_data):
         #first remove from json file is already exist the file
@@ -322,23 +317,23 @@ class AmazonUploader():
             return False
         return True
 
-    def update_bucket(self, photos, album_name):
+    def update_bucket(self, path, file_names, album_name):
         #update bucket
         amazon_bucket_name = self.get_bucket_name_for_album(album_name)
-        if photos:
+        if file_names:
             #checks if the albumname is in configfile. If not, put it in
             append_to_hash_file(
-                    photos[0]['dirname'],
+                    path,
                     hash_album,
                     hash_album,
                     album_name)
 
-        for photo in photos:
+        for file_name in file_names:
             #upload photos one by one and add hash to the config file
-            hash_of_photo = calculate_hash_of_file(photo['source'])
-            if self.upload_photo(photo, amazon_bucket_name):
-                self.append_to_amazon_config(album_name, photo)
-                append_to_hash_file(photo['dirname'], hash_photos, photo['filename'], hash_of_photo)
+            file_data = get_photo_data(path, file_name)
+            if self.upload_photo(file_data, amazon_bucket_name):
+                self.append_to_amazon_config(album_name, file_data)
+                append_to_hash_file(path, hash_photos, file_name, file_data['hash'])
             else:
                 print('\n Upload failed')
 
@@ -350,26 +345,25 @@ class AmazonUploader():
                 ExtraArgs = {'ACL': 'public-read', 'ContentType': 'text/html'})
 
     def create_bucket(self, bucket_name):
-        print('New album %s \n' % album_name)
         s3.create_bucket(Bucket = bucket_name,
                 ACL = "public-read",
                 CreateBucketConfiguration={ 'LocationConstraint': 'EU'})
 
-    def update_or_create_album(self, photos, album_name):
+    def update_or_create_album(self, path, file_names, album_name):
         bucket_name = self.get_bucket_name_for_album(album_name)
         if not self.is_valid_bucket(album_name):
+            print('New album %s \n' % album_name)
             #create bucket
             self.create_bucket(bucket_name)
+            clear_hash_data(path)
         self.update_index_html(bucket_name)
         print('Update album %s \n' % album_name)
-        print('New files: %d \n' % (len(photos)))
-        self.update_bucket(photos, album_name)
+        print('New files: %d \n' % (len(file_names)))
+        self.update_bucket(path, file_names, album_name)
 
     def upload_all(self, path, album):
         """Upload all media files from the given folder to the given album"""
         album_name = get_album_name(path, album)
-        print("Get photos and videos to upload...")
-        data = self.get_all_photos_data(path, album_name)
-        #get the photos needs to be uploaded
-        uploadable = [photo for photo in data if photo['uploaded'] == False]
-        self.update_or_create_album(uploadable, album_name)
+        print("Get photos and videos for uploading...")
+        uploadable_files = self.get_all_uploadable_files(path, album_name)
+        self.update_or_create_album(path, uploadable_files, album_name)
