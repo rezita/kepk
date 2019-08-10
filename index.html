@@ -49,12 +49,16 @@
                           cursor: pointer;
 			}
             .rotate90 {
+                max-width: 100vh;
+                max-height: 100vw;
                 transform: rotate(90deg);
             }
             .rotate180 {
                 transform: rotate(180deg);
             }
             .rotate270 {
+                max-width: 100vh;
+                max-height: 100vw;
                 transform: rotate(270deg);
             }
 		</style>
@@ -65,8 +69,8 @@
                     var item = catalog[idx];
                     if (item.type == "img") {
                       var img = document.createElement("img");
-                      img.src = item.src;
                       img.classList.add("content");
+                      img.src = item.src;
                       var orient = item.orient
                       switch (orient) {
                           case 6:
