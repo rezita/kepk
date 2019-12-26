@@ -313,7 +313,7 @@ class AmazonUploader():
                 ExtraArgs = {'ACL': 'public-read'},
                 Callback = ProgressPercentage(photo['filename']))
             print('\n')
-        except ClientError as e:
+        except botocore.client.ClientError as e:
             return False
         return True
 
@@ -355,10 +355,14 @@ class AmazonUploader():
     def update_or_create_album(self, path, file_names, album_name):
         bucket_name = self.get_bucket_name_for_album(album_name)
         if not self.is_valid_bucket(album_name):
-            print('New album %s \n' % album_name)
+            print('New album: %s \n' % album_name)
             #create bucket
-            self.create_bucket(bucket_name)
-            clear_hash_data(path)
+            try:
+                self.create_bucket(bucket_name)
+                clear_hash_data(path)
+            except botocore.client.ClientError as e:
+                print('Invalid album name: %s \n Use only lowercase letters and numbers. \n' % album_name)
+                exit()
         self.update_index_html(bucket_name)
         print('Update album %s \n' % album_name)
         print('New files: %d \n' % (len(file_names)))
