@@ -2,7 +2,7 @@ from amazonUploader import AmazonUploader
 import os
 import argparse
 
-parser = argparse.ArgumentParser(description = 'Uploade to amazon')
+parser = argparse.ArgumentParser(description = 'Upload to Amazon')
 parser.add_argument('-album', type = str, help = 'Album name')
 args = parser.parse_args()
 
