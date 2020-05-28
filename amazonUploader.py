@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 
+print('Connect to s3')
 s3 = boto3.resource('s3')
 base_bucket_name = "photos.pataky."
 hash_file=".amazonUploader" #file contains albumname and file-hash pairs
@@ -220,7 +221,6 @@ def get_uploadable_files(path, is_valid_album):
     all_files = get_media_files(path)
     uploaded = []
     if is_valid_album:
-        print('ok')
         uploaded = get_uploaded_file_names(path)
     else:
         clear_hash_data(path)
@@ -364,7 +364,7 @@ class AmazonUploader():
                 print('Invalid album name: %s \n Use only lowercase letters and numbers. \n' % album_name)
                 exit()
         self.update_index_html(bucket_name)
-        print('Update album %s \n' % album_name)
+        print('Update album: %s \n' % album_name)
         print('New files: %d \n' % (len(file_names)))
         self.update_bucket(path, file_names, album_name)
 
