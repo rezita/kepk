@@ -2,11 +2,12 @@
 <html>
 	<head>
 		<style>
-                        body {
-                          background-color: black;
-                          image-orientation: none;
-                        }
-			.main {
+      body {
+        background-color: black;
+        image-orientation: none;
+      }
+			
+      .main {
 				width: 95%;
 				height: 95%;
 				position: absolute;
@@ -27,109 +28,113 @@
 				left: 0;
 				right: 0;
 			}
-			.prev {
+			
+      .prev {
 				position: absolute;
 				left: 0%;
-                                top: 50%;
+        top: 50%;
 				z-index: 2;
 				font-size: 300%;
-                                color: gray;
+        color: gray;
 			}
-			.prev:hover {
-                          cursor: pointer;
+			
+      .prev:hover {
+        cursor: pointer;
 			}
 			.next {
 				position: absolute;
 				right: 0%;
-                                top: 50%;
+        top: 50%;
 				z-index: 2;
 				font-size: 300%;
-                                color: gray;
+        color: gray;
 			}
-			.next:hover {
-                          cursor: pointer;
+			
+      .next:hover {
+        cursor: pointer;
 			}
-            .rotate90 {
-                max-width: 100vh;
-                max-height: 100vw;
-                transform: rotate(90deg);
-            }
-            .rotate180 {
-                transform: rotate(180deg);
-            }
-            .rotate270 {
-                max-width: 100vh;
-                max-height: 100vw;
-                transform: rotate(270deg);
-            }
+      
+      .rotate90 {
+        max-width: 100vh;
+        max-height: 100vw;
+        transform: rotate(90deg);
+      }
+      
+      .rotate180 {
+        transform: rotate(180deg);
+      }
+      
+      .rotate270 {
+        max-width: 100vh;
+        max-height: 100vw;
+        transform: rotate(270deg);
+      }
 		</style>
 		<script>
 
-                  function loadItem(catalog, idx) {
-                    var main = document.getElementById("main");
-                    var item = catalog[idx];
-                    if (item.type == "img") {
-                      var img = document.createElement("img");
-                      img.classList.add("content");
-                      img.src = item.src;
-                      var orient = item.orient
-                      switch (orient) {
-                          case 6:
-                              img.classList.add("rotate90");
-                              break;
-                          case 3:
-                              img.classList.add("rotate180");
-                              break;
-                          case 8:
-                              img.classList.add("rotate270");
-                              break;
-                          default:
-                      }
-                      main.replaceChild(img, main.childNodes[0]);
-                    } else if (item.type == "vid") {
-                      var vid = document.createElement("video");
-                      vid.src = item.src;
-                      vid.controls = true;
-                      vid.classList.add("content");
-                      main.replaceChild(vid, main.childNodes[0]);
-                    }
+      function loadItem(catalog, idx) {
+        var main = document.getElementById("main");
+        var item = catalog[idx];
+        if (item.type == "img") {
+          var img = document.createElement("img");
+          img.classList.add("content");
+          img.src = item.src;
+          var orient = item.orient
+          switch (orient) {
+            case 6:
+              img.classList.add("rotate90");
+              break;
+            case 3:
+              img.classList.add("rotate180");
+              break;
+            case 8:
+              img.classList.add("rotate270");
+              break;
+            default:
+          }
+          main.replaceChild(img, main.childNodes[0]);
+        } else if (item.type == "vid") {
+            var vid = document.createElement("video");
+            vid.src = item.src;
+            vid.controls = true;
+            vid.classList.add("content");
+            main.replaceChild(vid, main.childNodes[0]);
+        }
 
+        document.getElementById("prev").onclick = function() {
+          if (idx == 0) {
+            loadItem(catalog, catalog.length - 1);
+          } else {
+            loadItem(catalog, idx - 1);
+          }
+            return false;
+        };
+        
+        document.getElementById("next").onclick = function() {
+          if (idx == catalog.length - 1) {
+            loadItem(catalog, 0);
+          } else {
+            loadItem(catalog, idx + 1);
+          }
+        };
+      }
 
-                    document.getElementById("prev").onclick = function() {
-                      if (idx == 0) {
-                        loadItem(catalog, catalog.length - 1);
-                      } else {
-                        loadItem(catalog, idx - 1);
-                      }
-                      return false;
-                    };
-                    document.getElementById("next").onclick = function() {
-                      if (idx == catalog.length - 1) {
-                        loadItem(catalog, 0);
-                      } else {
-                        loadItem(catalog, idx + 1);
-                      }
-                    };
-                  }
-
-                 function init() {
-                    fetch("photos.json")
-                      .then(function(catalog) {
-                        return catalog.json();
-                      })
-                      .then(function(jsonCatalog) {
-                        loadItem(jsonCatalog, 0);
-                      })
-                    }
-                </script>
+      function init() {
+        fetch("photos.json")
+          .then(function(catalog) {
+            return catalog.json();
+          })
+          .then(function(jsonCatalog) {
+            loadItem(jsonCatalog, 0);
+          })
+      }
+    </script>
 	</head>
 	<body onload="init()">
-          <div id="toplevel">
-		<div id="prev" class="prev"><p>&lt;</p></div>
-		<div id="main" class="main">
-			<p></p>
-		</div>
-		<div id="next" class="next"><p>&gt;</p></div>
-          </div>
+    <div id="toplevel">
+		  <div id="prev" class="prev"><p>&lt;</p></div>
+		  <div id="main" class="main"><p></p></div>
+		  <div id="next" class="next"><p>&gt;</p></div>
+    </div>
 	</body>
 </html>
