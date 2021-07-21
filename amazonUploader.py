@@ -1,3 +1,13 @@
+""" 
+This script is for uploading photoes and videos from the given _folder_ into amazon cloud.
+The upload method is the following:
+Step1. Selecting all the files from the _folder_ which will be uploaded (not uploaded yet)
+Step2. Create a new album if hasn't existed yet
+Step3. Update the album by file by file:
+Step3a. Upload the file
+Step3b. Write photo data into the amazon config file
+Step 3c. Write photo data (hash code) into the hash file (local file in the _folder_)
+"""
 import boto3, botocore
 import os, sys, hashlib
 import PIL.Image, PIL.ExifTags
