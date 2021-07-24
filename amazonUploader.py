@@ -5,18 +5,17 @@ Step1. Selecting all the files from the _folder_ which will be uploaded (not upl
 Step2. Create a new album if hasn't existed yet
 Step3. Update the album by file by file:
 Step3a. Upload the file
-Step3b. Write photo data into the amazon config file
-Step 3c. Write photo data (hash code) into the hash file (local file in the _folder_)
+Step3b. Upload thumbnail
+Step3c. Write photo data into the amazon config file
+Step 3d. Write photo data (hash code) into the hash file (local file in the _folder_)
 """
+from fileInfo import *
+from thumbnails import *
 import boto3, botocore
 import os, sys, hashlib
-import PIL.Image, PIL.ExifTags
-from datetime import datetime
 import configparser
 import threading
 import json
-import re
-import subprocess
 
 print('Connect to s3')
 s3 = boto3.resource('s3')
@@ -25,100 +24,10 @@ hash_file=".amazonUploader" #file contains albumname and file-hash pairs
 json_file = "photos.json"
 hash_photos = "Photos"
 hash_album = "Album"
-image_ext = ".jpg", ".jpeg", ".png", ".gif"
-video_ext = ".mov", ".avi", ".m4v", ".mp4"
 hash_prefix = "sha256_"
 
 def get_diff_of_lists(listA, listB):
     return list(set(listA) - set(listB))
-
-def is_valid_path(path):
-    """Checks if the given path exists"""
-    return os.path.exists(path)
-
-def get_media_files(path):
-    """Returns the list of media files are in predefined folder"""
-    return [file_name.lower() for file_name in os.listdir(path)
-            if file_name.lower().endswith(image_ext + video_ext)]
-
-def is_video_file(file_path):
-    """Checks if the given file (with path) is a movie file"""
-    return file_path.lower().endswith(video_ext)
-
-def is_image_file(file_path):
-    """Checks if the given file (with path) is an image"""
-    return file_path.lower().endswith(image_ext)
-
-def get_exif(file_path):
-    result = {}
-    if is_image_file(file_path):
-        img = PIL.Image.open(file_path)
-        result = getattr(img, '_getexif', lambda: {})()
-        img.close()
-    return result if result != None else {}
-
-def get_video_metadata_creation_time(file_path):
-    result =  "0000-00-00 00:00:00"
-    try:
-        cmd = ['ffprobe', '-print_format', 'json', '-show_format', file_path]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err =  p.communicate()
-        out = json.loads(out.decode('utf-8'))
-        result = out['format']['tags']['creation_time']
-    except (FileNotFoundError, KeyError) as e:
-        #it ffbpobe.exe or the kexs are not availale
-        pass
-    return result
-
-def get_date_taken_from_file_name(file_name):
-    result = -1
-    match = re.search(r'\d{8}_\d{6}', file_name)
-    if match:
-        try:
-            date = datetime.strptime(match.group(), '%Y%m%d_%H%M%S')
-            result = date
-        except ValueError as ve:
-            pass
-    return result
-
-def get_date_taken_from_path(file_path, file_name):
-    date_taken = get_date_taken_from_file_name(file_name)
-    if date_taken == -1:
-        date_taken = os.path.getctime(file_path)
-        date_taken = datetime.fromtimestamp(date_taken)
-    return date_taken
-
-def get_formed_date_taken(file_path, file_name, date_value, zero_value, date_format):
-    if date_value != zero_value:
-        date_taken = datetime.strptime(date_value, date_format)
-    else:
-        date_taken = get_date_taken_from_path(file_path, file_name)
-    return date_taken
-
-def get_date_taken(file_path, file_name):
-    date_taken = 0
-    if is_image_file(file_path):
-        exif_info = get_exif(file_path)
-        date_taken = exif_info.get(36867, "0000:00:00 00:00:00")
-        date_taken = get_formed_date_taken(file_path, file_name, date_taken,
-                "0000:00:00 00:00:00", "%Y:%m:%d %H:%M:%S")
-    elif is_video_file(file_path):
-        date_taken = get_video_metadata_creation_time(file_path)
-        date_taken = get_formed_date_taken(file_path, file_name, date_taken,
-                "0000-00-00 00:00:00", "%Y-%m-%d %H:%M:%S")
-    date_taken = date_taken.strftime('%Y%m%d%H%M%S')
-    return date_taken
-
-def get_orientation(file_path):
-    exif_info = get_exif(file_path)
-    return exif_info.get(274, 1)
-
-def get_file_info(file_path, file_name):
-    """get useful exif info of the file"""
-    result = {}
-    result['date_taken'] = get_date_taken(file_path, file_name)
-    result['orient'] = get_orientation(file_path)
-    return result
 
 def calculate_hash_of_file(filepath):
     ''' Calculates the Hash code of the file.'''
@@ -128,25 +37,13 @@ def calculate_hash_of_file(filepath):
         hasher.update(buffer)
     return (hasher.hexdigest())
 
-def get_size(file_path):
-    """Returns the size of the given file in MB"""
-    precision = 2
-    sizes = ((1024*1024, "MB"), (1024, "Kb"), (2, "bytes"), (1, "byte"))
-    if not is_valid_path(file_path):
-        return '{}{}'.format(0, 'MB')
-    size_in_bytes = os.path.getsize(file_path)
-    for min_size, abbrev in sizes:
-        if size_in_bytes >= min_size:
-            return '{} {}'.format(
-                    round(size_in_bytes / min_size, precision),
-                    abbrev)
-
 def get_photo_data(path, file_name):
     """Sets photo data for the given file."""
     file_path = os.path.join(path, file_name)
     upload_data = {'src': file_name,
             'type': 'vid' if is_video_file(file_name) else 'img',
-            'size': get_size(file_path)}
+            'thumbnail': get_thumbnail_name(file_name),
+            }
     data = {'upload_data': upload_data,
             'filename': file_name,
             'source': file_path,
@@ -327,6 +224,16 @@ class AmazonUploader():
             return False
         return True
 
+    def upload_thumbnail(self, photo, bucket_name):
+        try:
+            thumbnail = generate_thubnail(photo['source'], photo['filename'])
+            result =  s3.meta.client.upload_fileobj(Fileobj = thumbnail,
+                Bucket = bucket_name, Key = photo['upload_data']['thumbnail'],
+                ExtraArgs = {'ACL': 'public-read'})
+        except botocore.client.ClientError as e:
+            return False
+        return True
+
     def update_bucket(self, path, file_names, album_name):
         #update bucket
         amazon_bucket_name = self.get_bucket_name_for_album(album_name)
@@ -344,7 +251,7 @@ class AmazonUploader():
             print('%d/%d:' % (index, nr_of_files))
             #upload photos one by one and add hash to the config file
             file_data = get_photo_data(path, file_name)
-            if self.upload_photo(file_data, amazon_bucket_name):
+            if self.upload_photo(file_data, amazon_bucket_name) and self.upload_thumbnail(file_data, amazon_bucket_name):
                 self.append_to_amazon_config(album_name, file_data)
                 append_to_hash_file(path, hash_photos, file_name, file_data['hash'])
             else:
