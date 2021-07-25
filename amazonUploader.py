@@ -16,6 +16,7 @@ import os, sys, hashlib
 import configparser
 import threading
 import json
+from datetime import datetime
 
 print('Connect to s3')
 s3 = boto3.resource('s3')
@@ -173,21 +174,24 @@ class AmazonUploader():
         return result
 
     def is_key_exists(self, album_name, key):
-        result = True
         bucket_name = self.get_bucket_name_for_album(album_name)
+        if self.get_key_metadata(bucket_name, key):
+            return True
+        else:
+             return False
+
+    def get_key_metadata(self, bucket_name, key):
+        result = None
         try:
-            s3.meta.client.head_object(Bucket = bucket_name, Key = key)
+            result = s3.meta.client.head_object(Bucket = bucket_name, Key = key)
         except botocore.client.ClientError as e:
             error_code = e.response['Error']['Code']
             if error_code == '404':
-                result = False
+                result = None
         return result
 
     def is_json_exists(self, album_name):
         return self.is_key_exists(album_name, json_file)
-
-    def is_index_html_exists(self, album_name):
-        return self.is_key_exists(album_name, 'index.html')
 
     def get_all_uploadable_files(self, path, album_name):
         """Retruns all uploadable files from the given path"""
@@ -262,13 +266,25 @@ class AmazonUploader():
 
     def update_frontend_files(self, bucket_name):
         """upload index.html, style.css and gallery.js"""
-        print("Update index.html")
-        sys_path = sys.path[0]
         for item in frontend_files:
-            file_path = os.path.join(sys.path[0], item["name"])
-            s3.meta.client.upload_file(Filename = file_path, 
-                    Bucket = bucket_name, Key = item["name"],
-                    ExtraArgs = {'ACL': 'public-read', 'ContentType': item["type"]})
+            metadata = self.get_key_metadata(bucket_name, item["name"]) 
+            #it the file exists and out-of-date
+            if metadata:
+                item_path = os.path.join(sys.path[0], item["name"])
+                local_copy_date = os.path.getctime(item_path)
+                last_uploaded = datetime.timestamp(metadata.get("LastModified", 0))
+            
+                if last_uploaded < local_copy_date:
+                    print('Update: %s' % item["name"])
+                    s3.meta.client.upload_file(Filename = item_path, 
+                            Bucket = bucket_name, Key = item["name"],
+                            ExtraArgs = {'ACL': 'public-read', 'ContentType': item["type"]})
+            else: 
+                #if the file doesnt exist - need to be uploaded
+                print('Update: %s' % item["name"])
+                s3.meta.client.upload_file(Filename = item_path, 
+                        Bucket = bucket_name, Key = item["name"],
+                        ExtraArgs = {'ACL': 'public-read', 'ContentType': item["type"]})
 
     def create_bucket(self, bucket_name):
         s3.create_bucket(Bucket = bucket_name,
