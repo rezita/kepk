@@ -25,6 +25,9 @@ json_file = "photos.json"
 hash_photos = "Photos"
 hash_album = "Album"
 hash_prefix = "sha256_"
+frontend_files = [{"name": "index.html", "type": "text/html"}, 
+                {"name": "style.css", "type": "text/css"}, 
+                {"name": "gallery.js", "type": "text/javascript"}]
 
 def get_diff_of_lists(listA, listB):
     return list(set(listA) - set(listB))
@@ -257,12 +260,15 @@ class AmazonUploader():
             else:
                 print('\n Upload failed')
 
-    def update_index_html(self, bucket_name):
-        """upload index.html if not available or there is a newer version"""
-        index_html_path = sys.path[0] + '\index.html'
-        s3.meta.client.upload_file(Filename = index_html_path, 
-                Bucket = bucket_name, Key = 'index.html',
-                ExtraArgs = {'ACL': 'public-read', 'ContentType': 'text/html'})
+    def update_frontend_files(self, bucket_name):
+        """upload index.html, style.css and gallery.js"""
+        print("Update index.html")
+        sys_path = sys.path[0]
+        for item in frontend_files:
+            file_path = os.path.join(sys.path[0], item["name"])
+            s3.meta.client.upload_file(Filename = file_path, 
+                    Bucket = bucket_name, Key = item["name"],
+                    ExtraArgs = {'ACL': 'public-read', 'ContentType': item["type"]})
 
     def create_bucket(self, bucket_name):
         s3.create_bucket(Bucket = bucket_name,
@@ -280,7 +286,7 @@ class AmazonUploader():
             except botocore.client.ClientError as e:
                 print('Invalid album name: %s \n Use only lowercase letters and numbers. \n' % album_name)
                 exit()
-        self.update_index_html(bucket_name)
+        self.update_frontend_files(bucket_name)
         print('Update album: %s \n' % album_name)
         print('New files: %d \n' % (len(file_names)))
         self.update_bucket(path, file_names, album_name)
