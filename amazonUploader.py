@@ -28,7 +28,8 @@ hash_album = "Album"
 hash_prefix = "sha256_"
 frontend_files = [{"name": "index.html", "type": "text/html"}, 
                 {"name": "style.css", "type": "text/css"}, 
-                {"name": "gallery.js", "type": "text/javascript"}]
+                {"name": "gallery.js", "type": "text/javascript",
+                "name": "noThumbnail.jpg", "type": "image/jpeg"}]
 
 def get_diff_of_lists(listA, listB):
     return list(set(listA) - set(listB))
@@ -212,7 +213,7 @@ class AmazonUploader():
             #if json file doesn't exist - create with the given photo data
             json_content = []
         else:
-            #if json file exists - read-append*sort-save
+            #if json file exists - read-append-sort-save
             file_content = json_object.get()['Body'].read().decode('utf-8')
             json_content = json.loads(file_content)
 
@@ -265,7 +266,7 @@ class AmazonUploader():
                 print('\n Upload failed')
 
     def update_frontend_files(self, bucket_name):
-        """upload index.html, style.css and gallery.js"""
+        """upload index.html, style.css, gallery.js and noThumbnail.jpg"""
         for item in frontend_files:
             metadata = self.get_key_metadata(bucket_name, item["name"]) 
             #it the file exists and out-of-date
@@ -275,13 +276,13 @@ class AmazonUploader():
                 last_uploaded = datetime.timestamp(metadata.get("LastModified", 0))
             
                 if last_uploaded < local_copy_date:
-                    print('Update: %s' % item["name"])
+                    print('Update file: %s' % item["name"])
                     s3.meta.client.upload_file(Filename = item_path, 
                             Bucket = bucket_name, Key = item["name"],
                             ExtraArgs = {'ACL': 'public-read', 'ContentType': item["type"]})
             else: 
                 #if the file doesnt exist - need to be uploaded
-                print('Update: %s' % item["name"])
+                print('Update file: %s' % item["name"])
                 s3.meta.client.upload_file(Filename = item_path, 
                         Bucket = bucket_name, Key = item["name"],
                         ExtraArgs = {'ACL': 'public-read', 'ContentType': item["type"]})
