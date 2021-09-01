@@ -1,23 +1,112 @@
 body {
     background-color: black;
     image-orientation: none;
+    margin: 0px;
+    padding: 0px;
+    display: block;
+  }
+
+div {
+  margin: 0px;
+  padding: 0px;
+}
+
+.container {
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+}
+.content {
+  margin: 0px;
   }
 
   img {
     display: block;
   }
 
-  div.toplevel {
+  #toplevel {
     position: relative;
-    background-color: #111;
+   /* background-color: #111;*/
     margin: auto;
   }
 
-  .main {
+  .toplevel-nav-back {
+    padding-top: 20px;
+    height: 30px;
+  }
+
+  .toplevel-nav-back span{
+    display: block;
+    color: white;
+    visibility: hidden;
+  }
+
+  .main-gallery {
+    position: relative;
+    /*padding: 20px 0px;*/
+    background: transparent;
+    width: 100vw;
+    height: 75vh;
+    min-height: 100px;
+    /*background-color: aqua;*/
+  }
+
+  .gallery-nav div {
     position: absolute;
-    width: 90vw;
-    height: 80vh;
-    top: 5vh;
+    height: 100%;
+    /*top: 50%;*/
+    /*padding: 0px 5px;*/
+    min-width: 200px;
+    z-index: 1000;
+    font-size: 300%;
+    color: #999;
+    /*margin: auto;
+    cursor: pointer;*/
+  }
+
+  .gallery-nav div.next, .thumbs-nav div.thumbs-next {
+    right: 0;
+    text-align: right;
+  }
+
+  
+  .gallery-nav:hover, .thumbs-nav:hover{
+    cursor: pointer;
+  }
+
+  .gallery-nav span {
+    position: absolute;
+    top:50%;
+  }
+
+  .gallery-nav div.next span, .thumbs-nav div.thumbs-next span {
+    position: absolute;
+    right: 0;
+  }
+
+  .thumbs-nav div {
+    position: absolute;
+    height: 100%;
+    min-width: 30px;
+    z-index: 1000;
+    font-size: 200%;
+    color: #fff;
+    background: #333;
+    opacity: 0.8;
+  }
+
+  .thumbs-nav span {
+    position: absolute;
+    top:4vh;
+  }
+
+  .main {
+    position: relative;
+    text-align: center;
+    line-height: 0px;
+    max-width: 90vw;
+    max-height: 75vh;
+    /*top: 5vh;*/
     bottom: 0;
     left: 0;
     right: 0;
@@ -25,67 +114,84 @@ body {
     z-index: 100;
   }
 
-  .content {
-    position: absolute;
-    max-width: 100%;
-    max-height: 100%;
-    left: 0;
-    right: 0;
-  }
-
-  .prev,
-  .next {
-    position: absolute;
-    height: 70vh;
-    min-width: 200px;
-    top: 5vh;
-    z-index: 1000;
-    font-size: 300%;
-    color: gray;
-    margin: auto;
-  }
-
-  div.prev {
-    left: 0;
-  }
-
-  div.next {
-    right: 0;
-  }
-
-  div.prev span,
-  div.next span {
-    position: absolute;
-    top: 50%;
-    padding: 0px 5px;
-  }
-
-  .prev:hover,
-  .next:hover {
-    cursor: pointer;
-  }
-
-  div.next span {
-    right: 0;
+  .main-image {
+    position: relative;
+    /*max-width: 100%;
+    max-height: 100%;*/
+    /*left: 0;
+    right: 0;*/
   }
 
   .rotate90 {
-    max-width: 80vh;
+    max-width: 75vh;
     max-height: 90vw;
-    transform: translatex(calc(45vw - 50%)) translatey(calc(40vh - 50%)) rotate(90deg);
+    transform: translatex(calc(45vw - 50%)) translatey(calc(37.5vh - 50%)) rotate(90deg);
   }
 
   .rotate180 {
     transform: rotate(180deg);
+    max-width: 90vw;
+    max-height: 75vh;
     margin: 0 auto;
   }
 
   .rotate270 {
-    max-width: 80vh;
+    max-width: 75vh;
     max-height: 90vw;
-    transform: translatex(calc(45vw - 50%)) translatey(calc(40vh - 50%)) rotate(270deg);
+    transform: translatex(calc(45vw - 50%)) translatey(calc(37.5vh - 50%)) rotate(270deg);
   }
 
   .rotate0 {
+    max-width: 90vw;
+    max-height: 75vh;
     margin: 0 auto;
   }
+
+  .thumbs {
+    display: inline-block;
+    width: 100vw;
+    min-width: 600px;
+    height: 12vh;
+    min-height: 70px;
+    position: relative;
+    /*bottom: 2vh;*/
+    /*right: 0;
+    left: 0;*/
+    z-index: 100;
+    background-color: #333;
+    margin-top: 2vh;
+  }
+
+  .thumbs-main {
+    position: relative;
+    width: calc(100% - 40px);
+    right: 20px;
+    left: 20px;
+    z-index: 100;
+    margin: 0px 30px;
+    transform: translateY(-50%);
+    top: 50%;
+    height: 11vh;
+  }
+
+  .thumbs-div {
+    height: 11vh;
+    width: 11vh;
+    margin-right: 8px;
+    display: inline-block;
+  }
+
+  .thumbs-main img {
+    cursor: pointer;
+    border: 2px solid #bbb;
+    border-radius: 5px;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    box-sizing: border-box;
+  }
+
+  .selected img{
+    border: 2px solid yellow;
+  }
+

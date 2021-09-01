@@ -7,18 +7,37 @@
 </head>
 
 <body>
-  <div id="toplevel">
-    <div id="prev" class="prev">
-      <span>&lt;</span>
+  <div class="container">
+    <div class="content">
+      <div id="toplevel">
+        <div class="toplevel-nav-back">
+          <span>&lt; Back to album</span>
+        </div>
+        <div class="main-gallery">
+          <div class="gallery-nav">
+            <div id="prev" class="prev"><span>&lt;</span></div>
+            <div id="next" class="next"><span>&gt;</span></div>
+          </div>
+          <!--toplevel-nav-->
+          <div id="main" class="main">
+            <p></p>
+          </div>
+        </div>
+        <!--main-gallery-->
+        <div id = "thumbs" class="thumbs">
+          <div class="thumbs-nav">
+            <div id="thumbs-prev" class="thumbs-prev"><span>&lt;</span></div>
+            <div id="thumbs-next" class="thumbs-next"><span>&gt;</span></div>
+          </div>
+          <div id="thumbs-main" class="thumbs-main"></div>
+        </div>
+        <!--thumbs-->
+      </div>
+      <!--toplevel-->
     </div>
-    <div id="main" class="main">
-      <p></p>
-    </div>
-    <div id="next" class="next">
-      <span>&gt;</span>
-    </div>
+    <!--content-->
   </div>
+  <!--container-->
   <script type="text/javascript" src="gallery.js"></script>
 </body>
-
 </html>
