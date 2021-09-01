@@ -28,8 +28,8 @@ hash_album = "Album"
 hash_prefix = "sha256_"
 frontend_files = [{"name": "index.html", "type": "text/html"}, 
                 {"name": "style.css", "type": "text/css"}, 
-                {"name": "gallery.js", "type": "text/javascript",
-                "name": "noThumbnail.jpg", "type": "image/jpeg"}]
+                {"name": "gallery.js", "type": "text/javascript"},
+                {"name": "noThumbnail.jpg", "type": "image/jpeg"}]
 
 def get_diff_of_lists(listA, listB):
     return list(set(listA) - set(listB))
@@ -268,10 +268,11 @@ class AmazonUploader():
     def update_frontend_files(self, bucket_name):
         """upload index.html, style.css, gallery.js and noThumbnail.jpg"""
         for item in frontend_files:
+            item_path = os.path.join(sys.path[0], item["name"])
+            print(item_path)
             metadata = self.get_key_metadata(bucket_name, item["name"]) 
             #it the file exists and out-of-date
             if metadata:
-                item_path = os.path.join(sys.path[0], item["name"])
                 local_copy_date = os.path.getctime(item_path)
                 last_uploaded = datetime.timestamp(metadata.get("LastModified", 0))
             
