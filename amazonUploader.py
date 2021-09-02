@@ -196,6 +196,7 @@ class AmazonUploader():
 
     def get_all_uploadable_files(self, path, album_name):
         """Retruns all uploadable files from the given path"""
+        print("Get photos and videos for uploading...")
         is_valid_album = self.is_valid_bucket(album_name)
         return get_uploadable_files(path, is_valid_album)
 
@@ -242,11 +243,16 @@ class AmazonUploader():
             return False
         return True
 
-    def update_bucket(self, path, file_names, album_name):
+    def update_bucket(self, path, album_name):
+        print('Update album: %s \n' % album_name)
+
+        file_names = self.get_all_uploadable_files(path, album_name)
+        print('New files: %d \n' % (len(file_names)))
+
         #update bucket
         amazon_bucket_name = self.get_bucket_name_for_album(album_name)
         if file_names:
-            #checks if the albumname is in configfile. If not, put it in
+            #checks if the album name is in configfile. If not, put it in
             append_to_hash_file(
                     path,
                     hash_album,
@@ -271,7 +277,7 @@ class AmazonUploader():
             item_path = os.path.join(sys.path[0], item["name"])
             print(item_path)
             metadata = self.get_key_metadata(bucket_name, item["name"]) 
-            #it the file exists and out-of-date
+            #if the file exists and out-of-date
             if metadata:
                 local_copy_date = os.path.getctime(item_path)
                 last_uploaded = datetime.timestamp(metadata.get("LastModified", 0))
@@ -293,7 +299,7 @@ class AmazonUploader():
                 ACL = "public-read",
                 CreateBucketConfiguration={ 'LocationConstraint': 'EU'})
 
-    def update_or_create_album(self, path, file_names, album_name):
+    def update_or_create_album(self, path, album_name):
         bucket_name = self.get_bucket_name_for_album(album_name)
         if not self.is_valid_bucket(album_name):
             print('New album: %s \n' % album_name)
@@ -305,13 +311,9 @@ class AmazonUploader():
                 print('Invalid album name: %s \n Use only lowercase letters and numbers. \n' % album_name)
                 exit()
         self.update_frontend_files(bucket_name)
-        print('Update album: %s \n' % album_name)
-        print('New files: %d \n' % (len(file_names)))
-        self.update_bucket(path, file_names, album_name)
+        self.update_bucket(path, album_name)
 
     def upload_all(self, path, album):
         """Upload all media files from the given folder to the given album"""
         album_name = get_album_name(path, album)
-        print("Get photos and videos for uploading...")
-        uploadable_files = self.get_all_uploadable_files(path, album_name)
-        self.update_or_create_album(path, uploadable_files, album_name)
+        self.update_or_create_album(path, album_name)
