@@ -206,7 +206,7 @@ class AmazonUploader():
         json_content.append(new_data)
         return json_content
 
-    def append_to_amazon_config(self, album_name, photo_data):
+    def append_to_amazon_config(self, album_name, photo_records):
         bucket_name = self.get_bucket_name_for_album(album_name)
         json_object = s3.Object(bucket_name, json_file)
 
@@ -217,31 +217,39 @@ class AmazonUploader():
             #if json file exists - read-append-sort-save
             file_content = json_object.get()['Body'].read().decode('utf-8')
             json_content = json.loads(file_content)
-
-        json_content = self.add_to_json(json_content, photo_data['upload_data'])
+        
+        #add photo data to json file
+        for data in photo_records:
+            json_content = self.add_to_json(json_content, data)
         sorted_content = sorted(json_content, key = lambda k: k.get('date_taken', 0), reverse = True)
         json_object.put(ACL= 'public-read', Body = json.dumps(sorted_content, ensure_ascii = False))
 
-    def upload_photo(self, photo, bucket_name):
+    def append_photo_data_to_amazon_config(self, album_name, photo_data):
+        self.append_to_amazon_config(album_name, [photo_data.get('upload_data')])
+
+    def upload_photo(self, photo_data, bucket_name):
         try:
-            result =  s3.meta.client.upload_file(Filename = photo['source'],
-                Bucket = bucket_name, Key = photo['filename'],
+            result =  s3.meta.client.upload_file(Filename = photo_data['source'],
+                Bucket = bucket_name, Key = photo_data['filename'],
                 ExtraArgs = {'ACL': 'public-read'},
-                Callback = ProgressPercentage(photo['filename']))
+                Callback = ProgressPercentage(photo_data['filename']))
             print('\n')
         except botocore.client.ClientError as e:
             return False
         return True
 
-    def upload_thumbnail(self, photo, bucket_name):
+    def upload_photo_thumbnail(self, photo_path, photo_name, thumbnail_name, bucket_name):
         try:
-            thumbnail = generate_thubnail(photo['source'], photo['filename'])
+            thumbnail = generate_thubnail(photo_path, photo_name)
             result =  s3.meta.client.upload_fileobj(Fileobj = thumbnail,
-                Bucket = bucket_name, Key = photo['upload_data']['thumbnail'],
+                Bucket = bucket_name, Key = thumbnail_name,
                 ExtraArgs = {'ACL': 'public-read'})
         except botocore.client.ClientError as e:
             return False
         return True
+
+    def upload_thumbnail(self, photo_data, bucket_name):
+        return self.upload_photo_thumbnail(photo_data['source'], photo_data['filename'], photo_data['upload_data']['thumbnail'], bucket_name)
 
     def update_bucket(self, path, album_name):
         print('Update album: %s \n' % album_name)
@@ -266,7 +274,7 @@ class AmazonUploader():
             #upload photos one by one and add hash to the config file
             file_data = get_photo_data(path, file_name)
             if self.upload_photo(file_data, amazon_bucket_name) and self.upload_thumbnail(file_data, amazon_bucket_name):
-                self.append_to_amazon_config(album_name, file_data)
+                self.append_photo_data_to_amazon_config(album_name, file_data)
                 append_to_hash_file(path, hash_photos, file_name, file_data['hash'])
             else:
                 print('\n Upload failed')
@@ -317,3 +325,45 @@ class AmazonUploader():
         """Upload all media files from the given folder to the given album"""
         album_name = get_album_name(path, album)
         self.update_or_create_album(path, album_name)
+
+    def get_json_content(self, path, album_name):
+        result = []
+        if not self.is_json_exists(album_name):
+            return result
+        else:
+            #if json file exists
+            bucket_name = self.get_bucket_name_for_album(album_name)
+            json_object = s3.Object(bucket_name, json_file)
+            file_content = json_object.get()['Body'].read().decode('utf-8')
+            return json.loads(file_content)
+
+    def is_record_has_thumbnail(self, album_name, data):
+        if not data.get('thumbnail'):
+            return False
+        return self.is_key_exists(album_name, data.get('thumbnail'))
+
+    def update_with_thumbnails(self, path, album):
+        #it there is no json file
+        album_name = get_album_name(path, album)
+        amazon_bucket_name = self.get_bucket_name_for_album(album_name)
+        json_content = self.get_json_content(path, album_name)
+        updated_records = []
+
+        if not json_content:
+            return
+
+        for data in json_content:
+            #upload thumbnails and collect data
+            if not self.is_record_has_thumbnail(album_name, data):
+                file_name = data.get('src')
+                file_path = os.path.join(path, file_name)
+                data['thumbnail'] = get_thumbnail_name(file_name)
+                #check if the original photo is available
+                if is_valid_path(file_path):
+                    #upload thumbnail
+                    if self.upload_photo_thumbnail(file_path, file_name, data['thumbnail'], amazon_bucket_name):
+                        print("Upload thumbnail: %s" % data.get('thumbnail'))
+                        updated_records.append(data)
+
+        #refresh json with updated data from records which hadn't got thumbnail
+        self.append_to_amazon_config(album_name, updated_records)
