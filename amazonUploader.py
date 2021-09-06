@@ -283,13 +283,13 @@ class AmazonUploader():
         """upload index.html, style.css, gallery.js and noThumbnail.jpg"""
         for item in frontend_files:
             item_path = os.path.join(sys.path[0], item["name"])
-            print(item_path)
+            #print(item_path)
             metadata = self.get_key_metadata(bucket_name, item["name"]) 
             #if the file exists and out-of-date
             if metadata:
-                local_copy_date = os.path.getctime(item_path)
-                last_uploaded = datetime.timestamp(metadata.get("LastModified", 0))
-            
+                local_copy_date = os.path.getmtime(item_path)
+                last_uploaded = metadata.get("LastModified", 0).timestamp()
+
                 if last_uploaded < local_copy_date:
                     print('Update file: %s' % item["name"])
                     s3.meta.client.upload_file(Filename = item_path, 
