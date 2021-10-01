@@ -43,7 +43,6 @@ function loadItem(catalog, idx) {
 
     document.onkeydown = function(event) {
         const keyDown = event.key;
-        console.log(keyDown);
         switch (keyDown) {
             case "ArrowLeft":
                 loadItem(catalog, calculateIndex(idx, -1, catalog.length));
