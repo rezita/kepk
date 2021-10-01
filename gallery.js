@@ -33,21 +33,27 @@ function loadItem(catalog, idx) {
     }
 
     document.getElementById("prev").onclick = function () {
-        if (idx == 0) {
-            loadItem(catalog, catalog.length - 1);
-        } else {
-            loadItem(catalog, idx - 1);
-        }
+        loadItem(catalog, calculateIndex(idx, -1, catalog.length));
         return false;
     };
 
     document.getElementById("next").onclick = function () {
-        if (idx == catalog.length - 1) {
-            loadItem(catalog, 0);
-        } else {
-            loadItem(catalog, idx + 1);
+        loadItem(catalog, calculateIndex(idx, 1, catalog.length));
+    };
+
+    document.onkeydown = function(event) {
+        const keyDown = event.key;
+        console.log(keyDown);
+        switch (keyDown) {
+            case "ArrowLeft":
+                loadItem(catalog, calculateIndex(idx, -1, catalog.length));
+                break;
+            case 'ArrowRight':
+                loadItem(catalog, calculateIndex(idx, 1, catalog.length));
+                break;
         }
     };
+
     loadThumbnails(catalog, idx);
 }
 
