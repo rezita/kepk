@@ -41,7 +41,7 @@ function loadItem(catalog, idx) {
         loadItem(catalog, calculateIndex(idx, 1, catalog.length));
     };
 
-    document.onkeydown = function(event) {
+    document.onkeydown = function (event) {
         const keyDown = event.key;
         switch (keyDown) {
             case "ArrowLeft":
@@ -111,7 +111,7 @@ function calculateIndex(originalIndex, step, dataLength) {
     result = (originalIndex + step + dataLength) % dataLength;
     if (result < 0) { //in case if there are less images then nrOfImages
         result += dataLength;
-    } 
+    }
     return result;
 }
 
@@ -136,17 +136,17 @@ function loadMdiaItem(parentContainer, catalog, index) {
     let cItem = catalog[index];
     let cImg = document.createElement("img");
     if (cItem.hasOwnProperty("thumbnail")) {
-/*        fetch(cItem.thumbnail)
-        .then(res => {
-            if (res.ok) {
-                cImg.src = cItem.thumbnail;
-            } else {
-                cImg.src = "noThumbnail.jpg";
-            }
-        }).catch(err => cImg.src = "noThumbnail.jpg");*/
+        /*        fetch(cItem.thumbnail)
+                .then(res => {
+                    if (res.ok) {
+                        cImg.src = cItem.thumbnail;
+                    } else {
+                        cImg.src = "noThumbnail.jpg";
+                    }
+                }).catch(err => cImg.src = "noThumbnail.jpg");*/
         cImg.src = cItem.thumbnail;
         //if the image can not be loaded
-        cImg.addEventListener("error", function(event) {
+        cImg.addEventListener("error", function (event) {
             event.target.src = "noThumbnail.jpg";
             event.onerror = null;
         });
