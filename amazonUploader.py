@@ -29,7 +29,8 @@ hash_prefix = "sha256_"
 frontend_files = [{"name": "index.html", "type": "text/html"}, 
                 {"name": "style.css", "type": "text/css"}, 
                 {"name": "gallery.js", "type": "text/javascript"},
-                {"name": "noThumbnail.jpg", "type": "image/jpeg"}]
+                {"name": "noThumbnail.jpg", "type": "image/jpeg"},
+                {"name": "000video_bcgrd_0002.png", "type": "image/png"}]
 
 def get_diff_of_lists(listA, listB):
     return list(set(listA) - set(listB))
