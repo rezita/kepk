@@ -83,14 +83,14 @@ function loadThumbnails(catalog, idx) {
         if (i == 0) {
             addMediaToThumbs(catalog, idx, i, true);
         } else {
-            addMediaToThumbs(catalog, idx, i);
+            addMediaToThumbs(catalog, idx, i, false);
         }
     }
 
     document.getElementById("thumbs-prev").onclick = function () {
         thumbsCont.removeChild(thumbsCont.lastChild);
-        lastIdx = calculateIndex(lastIdx, -1, catalogLength);
-        firsIdx = calculateIndex(firsIdx, +1, catalogLength);
+        lastIdx = calculateIndex(lastIdx, +1, catalogLength);
+        firsIdx = calculateIndex(firsIdx, -1, catalogLength);
         let imgContainer = createImageContainer(false);
         thumbsCont.insertBefore(imgContainer, thumbsCont.firstChild);
         loadMdiaItem(imgContainer, catalog, firsIdx);
@@ -118,7 +118,6 @@ function calculateIndex(originalIndex, step, dataLength) {
 function addMediaToThumbs(catalog, idx, step, selected) {
     let imgContainer = createImageContainer(selected)
     thumbsCont.appendChild(imgContainer);
-
     let cIdx = calculateIndex(idx, step, catalog.length);
     loadMdiaItem(imgContainer, catalog, cIdx);
 }
