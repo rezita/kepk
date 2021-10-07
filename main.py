@@ -5,6 +5,7 @@ import argparse
 parser = argparse.ArgumentParser(description = 'Upload to Amazon')
 parser.add_argument('-album', type = str, help = 'Album name')
 parser.add_argument('-thumbnail', action = 'store_true', help = 'Update thumbnails')
+parser.add_argument('-update', action = 'store_true', help = 'Update fronend files')
 args = parser.parse_args()
 
 def getFolder():
@@ -22,11 +23,12 @@ album = getAlbum()
 
 def main():
     uploader = AmazonUploader()
-    if not args.thumbnail:
-        uploader.upload_all(getFolder(), getAlbum())
-    else:
-        print("thumbnail")
+    if args.thumbnail:
         uploader.update_with_thumbnails(getFolder(), getAlbum())
+    elif args.update:
+        uploader.update_view(getFolder(), getAlbum())
+    else:
+        uploader.upload_all(getFolder(), getAlbum())
 
 if __name__ == "__main__":
     main()

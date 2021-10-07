@@ -368,3 +368,11 @@ class AmazonUploader():
 
         #refresh json with updated data from records which hadn't got thumbnail
         self.append_to_amazon_config(album_name, updated_records)
+
+    def update_view(self, path, album):
+        album_name = get_album_name(path, album)
+        if self.is_valid_bucket(album_name):
+            bucket_name = self.get_bucket_name_for_album(album_name)
+            self.update_frontend_files(bucket_name)
+        else:
+            print('Invalid album.')
