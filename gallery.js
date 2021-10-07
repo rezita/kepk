@@ -160,14 +160,15 @@ function loadMdiaItem(parentContainer, catalog, index) {
     parentContainer.appendChild(cImg);
 
     if (cItem.type == "vid") {
-        let videDuration = document.createElement('div');
-        videDuration.classList.add('thumbs-video-duration');
-        videDuration.innerHTML = formatDuration(Math.floor(cItem.duration));
-        videDuration.onclick = function () {
-            loadItem(catalog, index);
+        if (cItem.hasOwnProperty("duration")){
+            let videDuration = document.createElement('div');
+            videDuration.classList.add('thumbs-video-duration');
+            videDuration.innerHTML = formatDuration(Math.floor(cItem.duration));
+            videDuration.onclick = function () {
+                loadItem(catalog, index);
+            }
+            parentContainer.appendChild(videDuration);
         }
-        parentContainer.appendChild(videDuration);
-
 
         let videPlayIcon = document.createElement('div');
         videPlayIcon.classList.add('thumbs-video-play');
@@ -176,7 +177,6 @@ function loadMdiaItem(parentContainer, catalog, index) {
             loadItem(catalog, index);
         }
         parentContainer.appendChild(videPlayIcon);
-
     }
 }
 
